@@ -57,3 +57,34 @@ def db(engine):
         session.close()
         with engine.begin() as connection:
             connection.execute(text("TRUNCATE users, sessions, profiles, generations CASCADE"))
+
+
+# --- API helpers shared by the authenticated endpoint tests ---------------------------------
+from fastapi.testclient import TestClient  # noqa: E402
+
+from apps.api.main import create_app  # noqa: E402
+from autocv.application.auth import AuthService  # noqa: E402
+from autocv.config import Settings  # noqa: E402
+from autocv.infrastructure.security import Argon2Hasher  # noqa: E402
+
+ALLOWED_ORIGIN = "http://localhost:5173"
+PASSWORD = "correct horse battery"
+
+
+@pytest.fixture
+def make_app(engine, db, tmp_path):
+    """Build the real app on the test database. Cheap Argon2 parameters keep tests fast."""
+    def build(generator=None, **settings):
+        settings = {"output_dir": tmp_path, "cors_origins": (ALLOWED_ORIGIN,), **settings}
+        auth = AuthService(Argon2Hasher(time_cost=1, memory_cost=8, parallelism=1))
+        return create_app(Settings(**settings), generator=generator,
+                          session_factory=sessionmaker(engine, expire_on_commit=False), auth=auth)
+    return build
+
+
+def sign_up(app, email="ana@example.com") -> TestClient:
+    """A client with its own cookie jar, already registered and signed in."""
+    client = TestClient(app, raise_server_exceptions=False)
+    response = client.post("/api/v1/auth/register", json={"email": email, "password": PASSWORD})
+    assert response.status_code == 201, response.text
+    return client

@@ -120,18 +120,25 @@ Documentación interactiva: <http://127.0.0.1:8000/docs>. Contrato OpenAPI: `/op
 | Método y ruta | Resultado |
 | --- | --- |
 | `GET /api/v1/health` | `200 {"status":"ok"}`; confirma vida del proceso |
-| `POST /api/v1/cv/generations` | Generación síncrona, `201` al completar |
-| `GET /api/v1/cv/generations/{id}/pdf` | PDF como descarga; `404` si no existe |
+| `POST /api/v1/cv/generations` | Requiere sesión. Generación síncrona, `201` al completar |
+| `GET /api/v1/cv/generations/{id}/pdf` | Requiere sesión. PDF como descarga; `404` si no existe **o pertenece a otro usuario** |
 | `POST /api/v1/auth/register` | Crea la cuenta e inicia sesión; `201`, `409` si el email existe, `422` si email o contraseña no son válidos |
 | `POST /api/v1/auth/login` | Inicia sesión; `200`, o `401` con el mismo mensaje para email desconocido y contraseña errónea |
 | `POST /api/v1/auth/logout` | Revoca la sesión en el servidor; `204`, idempotente |
 | `GET /api/v1/auth/me` | Usuario de la sesión actual; `401` sin sesión válida |
+| `GET /api/v1/profile` | Perfil guardado del usuario (vacío si no existe) con `complete` y `missing` |
+| `PUT /api/v1/profile` | Sustituye el perfil completo; `422` con la lista de campos inválidos |
+| `DELETE /api/v1/profile` | Borra el perfil; `204`, idempotente |
+| `GET /api/v1/profile/markdown` | El Markdown exacto que recibiría el generador (`text/markdown`) |
 
-Petición:
+Petición: se envía **exactamente una** fuente de perfil, el texto de un archivo o el perfil guardado.
 
 ```json
 {"profile_text":"Datos del candidato", "offer_text":"Oferta", "output_name":"cv.pdf"}
+{"use_saved_profile":true, "offer_text":"Oferta", "output_name":"cv.pdf"}
 ```
+
+Con `use_saved_profile`, si al perfil le falta el nombre, el email o al menos una experiencia o formación, responde `422 profile_incomplete` sin llamar al proveedor.
 
 Respuesta completada:
 
@@ -155,8 +162,20 @@ El enum público incluye `pending`, `generating`, `completed`, `failed`. En esta
 - **`AUTOCV_COOKIE_SECURE=true`** añade el atributo `Secure`; hay que activarlo detrás de HTTPS. Por defecto está desactivado porque el desarrollo local usa HTTP.
 - **CSRF**: además de `SameSite=Lax`, cualquier petición que modifica datos con una cabecera `Origin` distinta del propio servidor o de `AUTOCV_CORS_ORIGINS` se rechaza con `403`. CORS permite credenciales solo para esos orígenes explícitos.
 - **Sin base de datos configurada** (`DATABASE_URL` vacío) los endpoints de cuenta responden `503` y el resto de la API sigue funcionando.
-- **Pendiente para un despliegue público**: verificación de email, recuperación de contraseña y limitación de intentos de login. La generación de CV y la descarga de PDF aún no exigen sesión.
+- **Pendiente para un despliegue público**: verificación de email, recuperación de contraseña y limitación de intentos de login.
+- Las respuestas de `/auth/*` y `/profile*` llevan `Cache-Control: no-store`.
 - El frontend tendrá que enviar `credentials: 'include'` en sus `fetch`; se hará en la fase del frontend.
+
+### Perfil guardado
+
+`PUT /api/v1/profile` recibe el perfil estructurado (contacto, ubicación y relocations, enlaces, resumen, experiencia, educación, logros, proyectos, skills e idiomas) y lo guarda como JSONB en la tabla `profiles`, una fila por usuario. El esquema está en `src/autocv/domain/profile.py`.
+
+- **Validación estricta**: sin campos desconocidos, límites de longitud y de número de bloques, sin caracteres de control y solo enlaces `http(s)`. Los errores `422` indican la ruta del campo (`experience.0.start_date`) y el motivo, **nunca el valor enviado**.
+- **Fechas**: mes y año (`YYYY-MM`). Cada bloque con fechas tiene un `current` explícito. Un empleo debe tener `end_date` o `current: true`, así dejar la fecha de fin vacía nunca afirma por omisión que sigue en curso.
+- **Tamaño**: si el Markdown resultante supera los 100.000 caracteres (el límite del endpoint de generación) se rechaza con `profile_too_large`.
+- **Markdown para el generador**: `src/autocv/domain/profile_markdown.py` produce el mismo esquema de secciones que `profiles/profile.example.md`. Cada línea de una descripción se convierte en viñeta, de modo que el texto del usuario no puede inyectar encabezados ni secciones. `GET /api/v1/profile/markdown` muestra ese texto tal cual.
+- **Generaciones privadas**: cada PDF queda asociado a su usuario (`generations`). Pedir el PDF de otro usuario da el mismo `404` que uno inexistente.
+- La generación libera la conexión a la base de datos antes de llamar al proveedor, que puede tardar minutos.
 
 ## Frontend
 
