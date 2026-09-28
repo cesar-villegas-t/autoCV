@@ -122,6 +122,10 @@ Documentación interactiva: <http://127.0.0.1:8000/docs>. Contrato OpenAPI: `/op
 | `GET /api/v1/health` | `200 {"status":"ok"}`; confirma vida del proceso |
 | `POST /api/v1/cv/generations` | Generación síncrona, `201` al completar |
 | `GET /api/v1/cv/generations/{id}/pdf` | PDF como descarga; `404` si no existe |
+| `POST /api/v1/auth/register` | Crea la cuenta e inicia sesión; `201`, `409` si el email existe, `422` si email o contraseña no son válidos |
+| `POST /api/v1/auth/login` | Inicia sesión; `200`, o `401` con el mismo mensaje para email desconocido y contraseña errónea |
+| `POST /api/v1/auth/logout` | Revoca la sesión en el servidor; `204`, idempotente |
+| `GET /api/v1/auth/me` | Usuario de la sesión actual; `401` sin sesión válida |
 
 Petición:
 
@@ -143,6 +147,16 @@ Los textos admiten hasta 100.000 caracteres cada uno; no se admiten campos adici
 - `500`: fallo de compilación o error interno.
 
 El enum público incluye `pending`, `generating`, `completed`, `failed`. En esta versión, el POST espera al resultado y solo devuelve `completed` o `failed`. `Generator` y la dependencia `get_generator` delimitan el punto donde se podrá añadir ejecución asíncrona más adelante. No hay polling, cola, registro persistente de trabajos ni reintentos automáticos del POST. La descarga se resuelve por UUID en disco, por lo que sigue disponible tras reiniciar el proceso si se conserva el directorio.
+
+### Cuentas y sesiones
+
+- **Contraseñas**: 10–128 caracteres, guardadas solo como hash Argon2id. El login verifica contra un hash señuelo cuando el email no existe, para que el tiempo de respuesta no revele qué cuentas hay.
+- **Sesión**: cookie `autocv_session` con `HttpOnly` y `SameSite=Lax`. La base de datos guarda únicamente el SHA-256 del token, así que un volcado de la tabla `sessions` no permite suplantar a nadie. El logout y la expiración (`AUTOCV_SESSION_DAYS`, 7 por defecto) invalidan la sesión en el servidor.
+- **`AUTOCV_COOKIE_SECURE=true`** añade el atributo `Secure`; hay que activarlo detrás de HTTPS. Por defecto está desactivado porque el desarrollo local usa HTTP.
+- **CSRF**: además de `SameSite=Lax`, cualquier petición que modifica datos con una cabecera `Origin` distinta del propio servidor o de `AUTOCV_CORS_ORIGINS` se rechaza con `403`. CORS permite credenciales solo para esos orígenes explícitos.
+- **Sin base de datos configurada** (`DATABASE_URL` vacío) los endpoints de cuenta responden `503` y el resto de la API sigue funcionando.
+- **Pendiente para un despliegue público**: verificación de email, recuperación de contraseña y limitación de intentos de login. La generación de CV y la descarga de PDF aún no exigen sesión.
+- El frontend tendrá que enviar `credentials: 'include'` en sus `fetch`; se hará en la fase del frontend.
 
 ## Frontend
 
