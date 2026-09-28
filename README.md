@@ -2,6 +2,18 @@
 
 Monolito modular para generar un CV veraz, adaptado a una oferta, en inglés y en exactamente una página A4. Gemini propone el contenido estructurado; la aplicación valida los datos y renderiza una plantilla LaTeX local.
 
+## Arranque rápido (Windows)
+
+Con Docker, Node y el entorno virtual de Python ya instalados (ver [Requisitos e instalación](#requisitos-e-instalación)):
+
+```powershell
+Copy-Item .env.example .env
+# Editar .env y rellenar GEMINI_API_KEY
+.\start.ps1
+```
+
+Levanta PostgreSQL en Docker, el backend y el frontend, cada uno en su propia ventana, y abre `http://127.0.0.1:5173` en el navegador. `start.ps1` lee `.env` solo para pasar esas variables a los procesos que arranca; el backend en sí sigue sin cargar `.env` automáticamente (ver [Configuración](#configuración)). Cerrar las ventanas de PowerShell detiene el backend y el frontend; `docker compose down` detiene PostgreSQL.
+
 ## Estructura
 
 ```text
