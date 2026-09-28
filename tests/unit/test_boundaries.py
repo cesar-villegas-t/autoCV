@@ -114,3 +114,12 @@ def test_cli_missing_key_returns_safe_error(tmp_path, monkeypatch):
     with redirect_stderr(stderr):
         assert cli.main(["--profile", str(profile), "--offer", str(profile)]) == 1
     assert "GEMINI_API_KEY" in stderr.getvalue()
+
+
+def test_database_url_is_environment_only_and_never_in_repr(monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://user:PRIVATE@localhost/db")
+    settings = Settings.from_env()
+    assert settings.database_url.endswith("/db")
+    assert "PRIVATE" not in repr(settings)
+    monkeypatch.delenv("DATABASE_URL")
+    assert Settings.from_env().database_url == ""

@@ -9,10 +9,11 @@ from autocv.application.generation import Generator
 from autocv.config import Settings
 from autocv.infrastructure.llm.gemini import ProviderError
 from tests.fixtures.resume import sample_resume
+from tests.integration.conftest import sign_up
 
 
 @pytest.fixture
-def setup(tmp_path):
+def setup(tmp_path, make_app):
     settings = Settings(api_key="test-only", output_dir=tmp_path,
                         cors_origins=("http://localhost:5173",))
 
@@ -26,8 +27,8 @@ def setup(tmp_path):
     llm = Mock(return_value=json.dumps(sample_resume()))
     compiler = Mock(side_effect=compile_pdf)
     generator = Generator(settings, llm=llm, compiler=compiler)
-    with TestClient(create_app(settings, generator), raise_server_exceptions=False) as client:
-        yield client, llm, compiler
+    app = make_app(generator=generator, api_key="test-only")
+    yield sign_up(app), llm, compiler
 
 
 BODY = {"profile_text": "Candidate facts", "offer_text": "Job requirements", "output_name": "candidate.pdf"}

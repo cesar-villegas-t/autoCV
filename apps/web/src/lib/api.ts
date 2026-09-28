@@ -1,8 +1,11 @@
+import { emptyProfile, type CandidateProfile, type ProfileResponse } from './profile';
+
 export const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
 
 export type GenerationStatus = 'pending' | 'generating' | 'completed' | 'failed';
 export interface GenerateRequest {
-  profile_text: string;
+  profile_text?: string;
+  use_saved_profile?: boolean;
   offer_text: string;
   output_name?: string;
 }
@@ -12,6 +15,55 @@ export interface GenerationResponse {
   status: GenerationStatus;
   download_url: string | null;
   error: ApiError | null;
+}
+export interface AuthUser { id: string; email: string; created_at: string }
+
+const NETWORK_ERROR = 'No se pudo conectar con el servicio. Comprueba tu conexión y vuelve a intentarlo.';
+const BAD_RESPONSE = 'El servidor devolvió una respuesta inesperada.';
+
+/** Every request carries the session cookie; the server decides what it is used for. */
+async function call(path: string, init: RequestInit = {}): Promise<Response> {
+  try {
+    return await fetch(`${apiBaseUrl}${path}`, { credentials: 'include', ...init });
+  } catch {
+    throw new Error(NETWORK_ERROR);
+  }
+}
+
+async function readJson(response: Response): Promise<unknown> {
+  try {
+    return await response.json();
+  } catch {
+    throw new Error(BAD_RESPONSE);
+  }
+}
+
+/** A failed request's error, with the raw code and any per-field issues for forms to place. */
+export class ApiRequestError extends Error {
+  code: string;
+  fields: Record<string, string>;
+  constructor(message: string, code: string, fields: Record<string, string> = {}) {
+    super(message);
+    this.name = 'ApiRequestError';
+    this.code = code;
+    this.fields = fields;
+  }
+}
+
+function errorFrom(payload: unknown, messages: Record<string, string>, fallback: string): ApiRequestError {
+  const body = payload && typeof payload === 'object' ? (payload as { error?: unknown }).error : null;
+  const detail = body && typeof body === 'object' ? (body as { code?: unknown; fields?: unknown }) : null;
+  const code = detail && typeof detail.code === 'string' ? detail.code : 'unknown';
+  const fields: Record<string, string> = {};
+  if (detail && Array.isArray(detail.fields)) {
+    for (const issue of detail.fields) {
+      if (issue && typeof issue === 'object' && typeof (issue as { field?: unknown }).field === 'string'
+          && typeof (issue as { message?: unknown }).message === 'string') {
+        fields[(issue as { field: string }).field] = (issue as { message: string }).message;
+      }
+    }
+  }
+  return new ApiRequestError(Object.hasOwn(messages, code) ? messages[code] : fallback, code, fields);
 }
 
 export function downloadUrl(path: string): string {
@@ -23,30 +75,21 @@ export function downloadUrl(path: string): string {
 }
 
 export async function generateCv(body: GenerateRequest): Promise<GenerationResponse> {
-  let response: Response;
-  try {
-    response = await fetch(`${apiBaseUrl}/api/v1/cv/generations`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-  } catch {
-    throw new Error('No se pudo conectar con el servicio. Comprueba tu conexión y vuelve a intentarlo.');
-  }
-  let payload: unknown;
-  try {
-    payload = await response.json();
-  } catch {
-    throw new Error('El servidor devolvió una respuesta inesperada.');
-  }
+  const response = await call('/api/v1/cv/generations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const payload = await readJson(response);
   if (!payload || typeof payload !== 'object') {
-    throw new Error('El servidor devolvió una respuesta inesperada.');
+    throw new Error(BAD_RESPONSE);
   }
   const data = payload as Partial<GenerationResponse>;
   if (!response.ok || data.status === 'failed') {
     // Show only our own messages, never provider bodies or server diagnostics.
     const messages: Record<string, string> = {
       not_configured: 'El servicio no está disponible para generar en este momento. Inténtalo más tarde.',
+      unauthenticated: 'Tu sesión ha caducado. Inicia sesión de nuevo.',
       provider_error: 'El servicio de generación no pudo completar la solicitud. Vuelve a intentarlo.',
       provider_http_400: 'Gemini rechazó la solicitud (400). Revisa la configuración del modelo y la clave del backend.',
       provider_http_401: 'Gemini rechazó la autenticación (401). Revisa la clave configurada en el backend.',
@@ -67,6 +110,7 @@ export async function generateCv(body: GenerateRequest): Promise<GenerationRespo
       invalid_cv: 'No se pudo obtener un CV válido. Vuelve a intentarlo.',
       compilation_error: 'No se pudo preparar el PDF de una página. Revisa tus archivos y vuelve a intentarlo.',
       invalid_request: 'Revisa los archivos: ambos deben contener texto y no superar los 100.000 caracteres.',
+      profile_incomplete: 'Completa tu perfil guardado antes de generar un CV con él.',
     };
     const code = data.error?.code;
     throw new Error(typeof code === 'string' && Object.hasOwn(messages, code)
@@ -77,4 +121,84 @@ export async function generateCv(body: GenerateRequest): Promise<GenerationRespo
   }
   downloadUrl(data.download_url);
   return { id: data.id, status: data.status, download_url: data.download_url, error: null };
+}
+
+// --- Accounts ----------------------------------------------------------------------------
+
+const AUTH_MESSAGES: Record<string, string> = {
+  invalid_email: 'Introduce un email válido.',
+  weak_password: 'La contraseña debe tener entre 10 y 128 caracteres.',
+  email_taken: 'Ya existe una cuenta con este email.',
+  invalid_credentials: 'Email o contraseña incorrectos.',
+  unauthenticated: 'Inicia sesión para continuar.',
+  forbidden_origin: 'Solicitud rechazada. Recarga la página e inténtalo de nuevo.',
+  not_configured: 'El servicio no está disponible en este momento.',
+  invalid_request: 'Revisa el email y la contraseña.',
+};
+
+async function authRequest(path: string, body: { email: string; password: string }): Promise<AuthUser> {
+  const response = await call(path, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  });
+  const payload = await readJson(response);
+  if (!response.ok) throw errorFrom(payload, AUTH_MESSAGES, 'No se pudo completar la solicitud. Vuelve a intentarlo.');
+  return payload as AuthUser;
+}
+
+export const register = (email: string, password: string) => authRequest('/api/v1/auth/register', { email, password });
+export const login = (email: string, password: string) => authRequest('/api/v1/auth/login', { email, password });
+
+export async function logout(): Promise<void> {
+  await call('/api/v1/auth/logout', { method: 'POST' });
+}
+
+/** null means no session is active; never throws for that case. */
+export async function currentUser(): Promise<AuthUser | null> {
+  const response = await call('/api/v1/auth/me');
+  if (response.status === 401) return null;
+  const payload = await readJson(response);
+  if (!response.ok) throw errorFrom(payload, AUTH_MESSAGES, 'No se pudo comprobar la sesión.');
+  return payload as AuthUser;
+}
+
+// --- Profile -------------------------------------------------------------------------------
+
+const PROFILE_MESSAGES: Record<string, string> = {
+  ...AUTH_MESSAGES,
+  profile_too_large: 'El perfil es demasiado largo. Acorta alguna descripción.',
+  profile_invalid: 'El perfil guardado ya no es válido. Revísalo y guárdalo de nuevo.',
+  invalid_request: 'Revisa los campos señalados.',
+};
+
+function asProfileResponse(payload: unknown): ProfileResponse {
+  const body = payload as Partial<ProfileResponse> | null;
+  return {
+    profile: { ...emptyProfile, ...(body?.profile ?? {}) },
+    updated_at: body?.updated_at ?? null,
+    missing: body?.missing ?? [],
+    complete: body?.complete ?? false,
+  };
+}
+
+export async function fetchProfile(): Promise<ProfileResponse> {
+  const response = await call('/api/v1/profile');
+  const payload = await readJson(response);
+  if (!response.ok) throw errorFrom(payload, PROFILE_MESSAGES, 'No se pudo cargar el perfil.');
+  return asProfileResponse(payload);
+}
+
+export async function saveProfile(profile: CandidateProfile): Promise<ProfileResponse> {
+  const response = await call('/api/v1/profile', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(profile),
+  });
+  const payload = await readJson(response);
+  if (!response.ok) throw errorFrom(payload, PROFILE_MESSAGES, 'No se pudo guardar el perfil.');
+  return asProfileResponse(payload);
+}
+
+export async function clearProfile(): Promise<void> {
+  const response = await call('/api/v1/profile', { method: 'DELETE' });
+  if (!response.ok && response.status !== 204) {
+    throw errorFrom(await readJson(response), PROFILE_MESSAGES, 'No se pudo borrar el perfil.');
+  }
 }

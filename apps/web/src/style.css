@@ -115,4 +115,97 @@ h1 em { color: var(--accent); font-style: normal; }
   .remove-file { width: 44px; height: 44px; }
   .closing-note { font-size: 10px; line-height: 1.7; margin: 20px 8px 30px; }
 }
+/* --- Navigation --- */
+.app-nav { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.app-nav-tabs { display: flex; gap: 6px; }
+.nav-tab { display: inline-flex; align-items: center; gap: 7px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--muted); font-size: 12px; font-weight: 600; padding: 9px 14px; }
+.nav-tab .icon { width: 15px; height: 15px; }
+.nav-tab:hover { background: var(--accent-soft); color: var(--accent); }
+.nav-tab[aria-current] { background: var(--accent); color: #fff; }
+.app-nav-account { display: flex; align-items: center; gap: 12px; }
+.app-nav-email { font-size: 11px; color: var(--muted); }
+.loading-note { text-align: center; padding: 80px 0; color: var(--muted); font-size: 13px; }
+
+/* --- Auth screens --- */
+.auth-shell { display: flex; justify-content: center; padding: 60px 0 80px; }
+.auth-card { width: 100%; max-width: 380px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 32px 28px; }
+.auth-card h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.5px; margin: 0; }
+.auth-subtitle { font-size: 12px; color: var(--muted); line-height: 1.6; margin: 8px 0 24px; }
+.auth-submit { width: 100%; margin-top: 6px; }
+.auth-switch { text-align: center; font-size: 12px; color: var(--muted); margin: 18px 0 0; }
+.auth-switch .text-button { font-size: 12px; padding: 2px 4px; min-height: auto; }
+
+/* --- Shared form fields --- */
+.form-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.form-field:last-child { margin-bottom: 0; }
+.form-field label, .form-field > span:first-child { font-size: 11px; font-weight: 600; color: var(--muted); }
+.form-field input, .form-field textarea, .form-field select { border: 1px solid var(--line); border-radius: 6px; background: #fff; padding: 10px 12px; font-size: 13px; color: inherit; width: 100%; }
+.form-field input:focus-visible, .form-field textarea:focus-visible { outline-offset: 1px; }
+.form-field textarea { resize: vertical; min-height: 64px; line-height: 1.6; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 6px 18px; }
+.field-hint { font-size: 10px; color: var(--muted); margin: 0; }
+.field-error { display: flex; align-items: flex-start; gap: 6px; font-size: 11px; color: var(--error); line-height: 1.5; margin: 0; }
+.field-error .icon { width: 13px; height: 13px; margin-top: 1px; flex-shrink: 0; }
+.checkbox-field { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); }
+.checkbox-field input { width: auto; }
+
+/* --- Profile editor --- */
+.profile-shell { padding: 40px 0 64px; }
+.profile-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 28px; }
+.profile-heading h1 { font-size: 26px; font-weight: 600; letter-spacing: -0.7px; margin: 0; }
+.profile-heading p { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
+.profile-status { font-size: 11px; font-weight: 600; border-radius: 20px; padding: 7px 14px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.profile-status .icon { width: 13px; height: 13px; }
+.profile-status.is-complete { color: var(--accent); background: var(--accent-soft); }
+.profile-status.is-incomplete { color: #8e352a; background: #fff5f1; }
+.profile-shell fieldset { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); padding: 22px 24px; margin: 0 0 20px; }
+.profile-shell legend { font-size: 13px; font-weight: 600; padding: 0 6px; }
+.dates-fieldset { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) auto; gap: 6px 18px; align-items: end; margin-bottom: 16px; }
+.dates-fieldset .checkbox-field { padding-bottom: 10px; white-space: nowrap; }
+.block-list { display: flex; flex-direction: column; gap: 16px; }
+.block-card { border: 1px solid var(--line); border-radius: 8px; background: #fcfcfa; padding: 16px 18px; }
+.block-card-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.block-card-header strong { font-size: 12px; font-weight: 600; overflow-wrap: anywhere; }
+.block-card-actions { display: flex; gap: 2px; flex-shrink: 0; }
+.block-card-actions button { border: 0; background: transparent; color: var(--muted); width: 30px; height: 30px; display: grid; place-items: center; border-radius: 5px; }
+.block-card-actions button:hover:not(:disabled) { background: var(--accent-soft); color: var(--accent); }
+.block-card-actions button:disabled { opacity: .35; }
+.block-card-actions .icon { width: 15px; height: 15px; }
+.remove-block-button:hover:not(:disabled) { background: #fff0ec !important; color: var(--error) !important; }
+.add-block-button { display: inline-flex; align-items: center; gap: 8px; border: 1px dashed #cdd5ca; border-radius: 8px; background: transparent; color: var(--accent); font-size: 12px; font-weight: 600; padding: 12px; justify-content: center; }
+.add-block-button:hover:not(:disabled) { background: var(--accent-soft); }
+.add-block-button:disabled { opacity: .4; }
+.add-block-button .icon { width: 15px; height: 15px; }
+.tag-input { display: flex; flex-wrap: wrap; gap: 7px; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; }
+.tag-input input { border: 0; flex: 1; min-width: 120px; font-size: 13px; padding: 3px 0; }
+.tag { display: inline-flex; align-items: center; gap: 6px; background: var(--accent-soft); color: var(--accent); font-size: 11px; font-weight: 600; border-radius: 20px; padding: 5px 6px 5px 12px; }
+.tag button { border: 0; background: transparent; color: inherit; width: 18px; height: 18px; display: grid; place-items: center; border-radius: 50%; }
+.tag button:hover { background: #ffffff80; }
+.tag .icon { width: 11px; height: 11px; }
+.profile-actions { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-top: 8px; }
+.profile-save-status { font-size: 11px; color: var(--muted); }
+.profile-actions-buttons { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.danger-button { border: 1px solid #d98b7f; background: #fff; color: var(--error); border-radius: 6px; font-size: 11px; font-weight: 600; padding: 9px 14px; }
+.danger-button:hover:not(:disabled) { background: #fff0ec; }
+
+/* --- Generation source toggle --- */
+.source-tabs { display: inline-flex; gap: 4px; background: #f1f3ed; border-radius: 8px; padding: 4px; margin-bottom: 20px; }
+.source-tab { border: 0; background: transparent; color: var(--muted); font-size: 11px; font-weight: 600; border-radius: 6px; padding: 9px 14px; }
+.source-tab[aria-selected="true"] { background: #fff; color: var(--accent); box-shadow: 0 1px 2px #263e2c14; }
+.source-tab:disabled { opacity: .6; }
+.saved-profile-card { display: flex; flex-direction: column; }
+.saved-profile-body { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 12px; min-height: 186px; border: 1px solid var(--line); border-radius: 8px; padding: 24px; background: #fcfcfa; }
+.saved-profile-ready { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--accent); margin: 0; }
+.saved-profile-ready .icon { width: 15px; height: 15px; }
+
+@media (max-width: 640px) {
+  .app-nav { padding: 12px 0; }
+  .auth-card { padding: 26px 20px; }
+  .profile-shell fieldset { padding: 18px 16px; }
+  .profile-heading { flex-direction: column; align-items: stretch; }
+  .profile-actions { flex-direction: column; align-items: stretch; }
+  .profile-actions-buttons { justify-content: stretch; }
+  .profile-actions-buttons .primary-button { width: 100%; }
+}
+
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }

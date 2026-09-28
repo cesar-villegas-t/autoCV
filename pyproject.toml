@@ -7,7 +7,10 @@ name = "autocv"
 version = "0.1.0"
 description = "Evidence-based CV generation with Gemini and LaTeX"
 requires-python = ">=3.11"
-dependencies = ["pydantic>=2.10,<3", "fastapi>=0.115,<1", "uvicorn>=0.30,<1"]
+dependencies = [
+    "pydantic>=2.10,<3", "fastapi>=0.115,<1", "uvicorn>=0.30,<1",
+    "sqlalchemy>=2.0,<3", "alembic>=1.13,<2", "psycopg[binary]>=3.2,<4", "argon2-cffi>=23.1,<26",
+]
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10", "httpx>=0.27,<1", "build>=1,<2"]
