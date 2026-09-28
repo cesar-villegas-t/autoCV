@@ -22,7 +22,7 @@ describe('generation flow', () => {
     let finish!: (value: Response) => void;
     const fetchMock = vi.fn<typeof fetch>(() => new Promise<Response>(resolve => { finish = resolve; }));
     vi.stubGlobal('fetch', fetchMock);
-    render(<GenerationForm />);
+    render(<GenerationForm onEditProfile={() => {}} />);
     expect(button().disabled).toBe(true);
     await fill();
     expect(fetchMock).not.toHaveBeenCalled();
@@ -52,7 +52,7 @@ describe('generation flow', () => {
       error: { code: 'provider_error', message: 'PRIVATE provider details' } }), { status: 502 }))
       .mockResolvedValueOnce(new Response(JSON.stringify(response), { status: 201 }));
     vi.stubGlobal('fetch', fetchMock);
-    render(<GenerationForm />);
+    render(<GenerationForm onEditProfile={() => {}} />);
     await fill();
     fireEvent.click(button());
     expect((await screen.findByRole('alert')).textContent).toContain('Vuelve a intentarlo');
@@ -65,7 +65,7 @@ describe('generation flow', () => {
   });
 
   it('supports drag and drop, replacement, removal and reselecting the same file', async () => {
-    render(<GenerationForm />);
+    render(<GenerationForm onEditProfile={() => {}} />);
     const zone = profile().closest('.dropzone')!;
     fireEvent.dragEnter(zone, { dataTransfer: { files: [] } });
     expect(zone.classList.contains('is-dragging')).toBe(true);
@@ -89,7 +89,7 @@ describe('generation flow', () => {
     ['large.md', 'x'.repeat(400001), '', '400 kB'],
     ['long.md', 'x'.repeat(100001), '', '100.000'],
   ])('reports accessible validation for %s', async (name, text, mime, message) => {
-    render(<GenerationForm />);
+    render(<GenerationForm onEditProfile={() => {}} />);
     choose(profile(), name, text, mime);
     const error = await screen.findByRole('alert');
     expect(error.textContent).toContain(message);
@@ -99,7 +99,7 @@ describe('generation flow', () => {
   });
 
   it('rejects multiple dropped files and keeps previously selected files', async () => {
-    render(<GenerationForm />);
+    render(<GenerationForm onEditProfile={() => {}} />);
     await fill();
     fireEvent.drop(profile().closest('.dropzone')!, { dataTransfer: { files: [new File(['a'], 'a.md'), new File(['b'], 'b.md')] } });
     expect((await screen.findByRole('alert')).textContent).toContain('un solo archivo');
@@ -108,7 +108,7 @@ describe('generation flow', () => {
   });
 
   it('has labelled keyboard controls that open the file picker', () => {
-    render(<GenerationForm />);
+    render(<GenerationForm onEditProfile={() => {}} />);
     const open = vi.spyOn(profile(), 'click');
     fireEvent.click(screen.getByRole('button', { name: 'Seleccionar tu perfil profesional' }));
     expect(open).toHaveBeenCalledOnce();

@@ -186,7 +186,14 @@ Copy-Item .env.example .env
 npm run dev
 ```
 
-Abrir <http://localhost:5173>. En Linux/macOS, usar `cp .env.example .env`. `VITE_API_BASE_URL` configura la raíz del backend, por defecto `http://127.0.0.1:8000`; reiniciar Vite tras cambiarla. Añadir el origen exacto de la página a CORS. La pantalla permite introducir perfil/oferta, muestra carga y errores y ofrece la descarga. Usa estado local de React, sin librerías de diseño o estado.
+Abrir <http://localhost:5173>. En Linux/macOS, usar `cp .env.example .env`. `VITE_API_BASE_URL` configura la raíz del backend, por defecto `http://127.0.0.1:8000`; reiniciar Vite tras cambiarla. Añadir el origen exacto de la página a `AUTOCV_CORS_ORIGINS` en el backend. Usa estado local de React (`useState`/`useContext`), sin librerías de enrutado, diseño ni gestión de estado.
+
+Sin sesión, la app muestra un formulario de inicio de sesión o registro (`src/features/auth/`). Con sesión, la cabecera ofrece **Generar CV** y **Mi perfil**:
+
+- **Mi perfil** (`src/features/profile/ProfileEditor.tsx`) edita el perfil estructurado: contacto, ubicación, relocations (`TagInput`, con Intro/coma para añadir), otros enlaces, resumen, y bloques repetibles de experiencia, educación, logros, proyectos e idiomas (`BlockList`, con añadir, reordenar y eliminar). Los pares de fechas usan `<input type="month">` con una casilla "Actualmente"/"En curso" (`DatesFieldset`). Muestra qué falta para poder generar un CV, y los errores `422` del backend se colocan junto al campo exacto que falló (`experience.2.start_date`), nunca como un mensaje genérico.
+- **Generar CV** (`src/features/generation/GenerationForm.tsx`) elige entre subir un archivo Markdown o usar el perfil guardado. La comprobación de si el perfil guardado está completo se hace de forma perezosa, solo al seleccionar esa pestaña, así que la pestaña de subir archivo no hace peticiones de más.
+
+`src/lib/api.ts` añade `credentials: 'include'` a toda petición, para que la cookie de sesión viaje con ella, y traduce los códigos de error del backend a mensajes en español sin repetir nunca el texto enviado por el usuario ni detalles internos.
 
 ## Verificación
 
@@ -203,12 +210,12 @@ npm test
 npm run build
 ```
 
-Se mantienen las 14 pruebas originales, sin depender de PDFs del usuario. La suite adicional verifica contratos estrictos, seguridad de nombres, CLI, configuración, reintentos, respuesta API y descarga. Las pruebas web verifican solicitud, carga, descarga y errores con `fetch` simulado. No se hacen llamadas reales a Gemini.
+Se mantienen las 14 pruebas originales, sin depender de PDFs del usuario. La suite adicional verifica contratos estrictos, seguridad de nombres, CLI, configuración, reintentos, respuesta API, descarga, cuentas, sesiones y perfil (esta última contra PostgreSQL real; ver [Base de datos](#base-de-datos)). Las pruebas web verifican solicitud, carga, descarga, errores, autenticación, el editor de perfil y el flujo de perfil guardado con `fetch` simulado. No se hacen llamadas reales a Gemini ni a un backend real.
 
 ## Límites actuales
 
 - Generación síncrona: puede tardar varios minutos; cualquier proxy deberá permitir esa duración. Un cierre del navegador no cancela una generación ya iniciada.
-- Sin autenticación, cuotas ni limpieza automática de artefactos. Pensado para uso local o un entorno de confianza; conservar los archivos implica conservar datos personales. La ruta UUID no sustituye a un control de acceso.
+- Sin cuotas ni limpieza automática de artefactos, y sin verificación de email, recuperación de contraseña ni límite de intentos de login (ver [Cuentas y sesiones](#cuentas-y-sesiones)). Pensado para uso local o un entorno de confianza; conservar los archivos implica conservar datos personales. La ruta UUID de descarga ya exige sesión y comprueba la propiedad de cada generación, pero no sustituye una auditoría de seguridad completa.
 - Se conservan la neutralización de LaTeX, `-no-shell-escape`, el límite de tiempo y la comprobación de una página mediante la salida de `pdflatex`. Un CV que desborde la página falla; no se recorta ni se vuelve a generar automáticamente.
 - Solo se reintentan fallos de red/timeout y HTTP 408, 429, 500, 502, 503, 504, hasta tres intentos. No se muestran cuerpos del proveedor ni claves. Los logs locales de LaTeX pueden contener texto del CV y permanecen ignorados.
 - La fidelidad semántica del contenido requiere revisión humana: los modelos validan estructura y tipos, no demuestran que cada afirmación sea cierta.
