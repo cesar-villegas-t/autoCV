@@ -186,7 +186,9 @@ Copy-Item .env.example .env
 npm run dev
 ```
 
-Abrir <http://localhost:5173>. En Linux/macOS, usar `cp .env.example .env`. `VITE_API_BASE_URL` configura la raíz del backend, por defecto `http://127.0.0.1:8000`; reiniciar Vite tras cambiarla. Añadir el origen exacto de la página a `AUTOCV_CORS_ORIGINS` en el backend. Usa estado local de React (`useState`/`useContext`), sin librerías de enrutado, diseño ni gestión de estado.
+Abrir <http://127.0.0.1:5173>, no `localhost:5173`. `VITE_API_BASE_URL` configura la raíz del backend, por defecto `http://127.0.0.1:8000`; reiniciar Vite tras cambiarla. Añadir el origen exacto de la página a `AUTOCV_CORS_ORIGINS` en el backend. Usa estado local de React (`useState`/`useContext`), sin librerías de enrutado, diseño ni gestión de estado.
+
+**La cookie de sesión exige que el frontend y el backend usen el mismo host.** Es `SameSite=Lax`, y para el navegador `localhost` y `127.0.0.1` son sitios distintos aunque apunten a la misma máquina: si el frontend se abre en `localhost:5173` mientras el backend responde en `127.0.0.1:8000`, la cookie se guarda pero nunca se envía de vuelta, y toda petición autenticada da `401` en silencio. Usar `127.0.0.1` en ambos lados (el valor por defecto de `VITE_API_BASE_URL`) evita el problema; si se cambia uno, cambiar el otro a juego.
 
 Sin sesión, la app muestra un formulario de inicio de sesión o registro (`src/features/auth/`). Con sesión, la cabecera ofrece **Generar CV** y **Mi perfil**:
 
