@@ -11,6 +11,7 @@ class Settings:
     model: str = "gemini-3.5-flash-lite"
     output_dir: Path = Path("output")
     cors_origins: tuple[str, ...] = ()
+    database_url: str = field(default="", repr=False)
 
     def __post_init__(self):
         for origin in self.cors_origins:
@@ -26,5 +27,6 @@ class Settings:
             api_key=os.getenv("GEMINI_API_KEY", "").strip(),
             model=os.getenv("AUTOCV_MODEL", "gemini-3.5-flash-lite"),
             output_dir=Path(os.getenv("AUTOCV_OUTPUT_DIR", "output")),
+            database_url=os.getenv("DATABASE_URL", "").strip(),
             cors_origins=tuple(x.strip() for x in os.getenv("AUTOCV_CORS_ORIGINS", "").split(",") if x.strip()),
         )

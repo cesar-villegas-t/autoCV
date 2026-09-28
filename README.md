@@ -11,9 +11,11 @@ src/autocv/
   infrastructure/llm/     # Cliente HTTP de Gemini y reintentos transitorios
   infrastructure/latex/   # Plantilla/renderizador existente y compilación
   prompts/                # Prompt original y guía de contenido, sin cambios funcionales
+  infrastructure/db/      # Modelos SQLAlchemy y fábricas de motor/sesión (PostgreSQL)
   config.py               # Configuración exclusivamente por entorno
   cli.py                  # CLI delgada
 apps/api/                 # FastAPI, rutas y contratos HTTP independientes
+migrations/               # Migraciones Alembic
 apps/web/                 # React + TypeScript + Vite; funcionalidad generation y cliente HTTP
 tests/unit/               # Pruebas originales migradas y pruebas de límites
 tests/integration/        # API y descarga con proveedor/compilador simulados
@@ -65,6 +67,20 @@ Copy-Item profiles/profile.example.md profiles/profile.md
 ```
 
 En Linux/macOS: `cp profiles/profile.example.md profiles/profile.md`.
+
+## Base de datos
+
+El proyecto usa PostgreSQL con SQLAlchemy y Alembic. Para desarrollo hay un `docker-compose.yml` que levanta PostgreSQL 16 en `127.0.0.1:55432` (puerto elegido para no chocar con instalaciones nativas en 5432/5433) y crea además la base `autocv_test`. Las credenciales del compose son solo para uso local.
+
+```powershell
+docker compose up -d --wait db
+$env:DATABASE_URL = "postgresql+psycopg://autocv:autocv@127.0.0.1:55432/autocv"
+alembic upgrade head
+```
+
+Esquema actual: `users`, `sessions`, `profiles` y `generations`. Tras cambiar los modelos, generar la migración con `alembic revision --autogenerate -m "descripción"` y revisarla; `alembic check` indica si los modelos y las migraciones divergen.
+
+Las pruebas de integración usan `AUTOCV_TEST_DATABASE_URL` (por defecto la base `autocv_test` del compose). **Borran y recrean el esquema**, por lo que se niegan a ejecutarse si el nombre de la base no termina en `_test`. Si la base no está accesible, esas pruebas se omiten con un aviso.
 
 ## CLI y paquete
 
